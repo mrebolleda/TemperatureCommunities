@@ -1,0 +1,247 @@
+---
+title: "TC: Amplicon analysis"
+author: "Maria Rebolleda Gómez"
+date: "01/10/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+Reads from Argonne came in a single file. To demultiplex I used [idemp](https://github.com/yhwu/idemp) and then change their names for simpler calling. 
+```{bash}
+~/Software/idemp/idemp -b barcodes_good2.txt -I1 Run1_I1_001.fastq -R1 Run1_R1_001.fastq -R2 Run1_R2_001.fastq -o demultiplexed2
+~/Software/idemp/idemp -b barcodes_good.txt -I1 Run2_I1_001.fastq -R1 Run2_R1_001.fastq -R2 Run2_R2_001.fastq -o demultiplexed2
+mkdir unsigned
+mv *_unsigned* unsigned
+
+```
+
+Filenames start with `Run$N_R$1_001.fastq` and then after `_` their label id. Change the name to something simpler
+```{bash}
+for file in *"_001.fastq_"*; do mv -- "$file" "${file//_001.fastq/}"; done
+
+```
+Demultiplexed samples are available in NCBI SRA (Accession: PRJNA992630).
+
+```{bash}
+#Check quality of data with fastq
+mkdir 02_fastQC
+fastqc *.fastq.gz --outdir="/media/mariargz/Extra Drive 1/TC_AmpliconSequencing/demultiplexed2/02_fastQC"
+```
+
+
+# DADA2 Pipeline
+Using demultiplexed files. 
+
+## Load Packages and Prep Data
+```{r}
+
+# Install and load in dada2 package
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install("dada2", version = "3.17")
+
+library(dada2)
+library(data.table)
+library(tidyverse)
+
+
+# Assign path to data (change to the right path to directory)
+#parent = "Path to directory /CommmunityAssembly_16s"
+
+# Assign directory to store ouput from analyses
+path.out <- paste0(parent, "/Output/")
+# Assign directory to store ESV data 
+path.data<- paste0(parent,"/Processed_Data/")
+# Assign directory to sequences (NCBI SRA; Accession: PRJNA992630)
+# path.in<- "Directory to sequences"
+
+# Set working directory
+setwd(path.out)
+
+
+# Create address to access fastq files
+a <- list.files(path.in)
+
+# Create list of file addresses for each fastq file
+fnFs <- sort(list.files(path.in, pattern="R1.TC", full.names = TRUE))
+fnRs <- sort(list.files(path.in, pattern="R2.TC", full.names = TRUE))
+
+# Obtain information of the sample (between periods). 
+sample.names <- basename(fnFs) %>% strsplit("\\.") %>%
+  sapply(`[`,2)
+
+
+```
+
+## Read Quality Profiles
+```{r}
+#Select a random set of samples to look at
+rdm <- sample(1:length(fnFs), 25)
+# Forward
+plotQualityProfile(fnFs[rdm])
+# Reverse
+plotQualityProfile(fnRs[rdm])
+
+```
+
+Quality drops ~200bp in both forward and reverse. Some reads are low quality (minority in each sample)
+
+## Filter and Trim
+```{r}
+# Place filtered files in filtered/subdirectory
+filtFs <- file.path(path.in, "03_filtered", paste0(sample.names, "_F_filt.fastq.gz"))
+filtRs <- file.path(path.in, "03_filtered", paste0(sample.names, "_R_filt.fastq.gz"))
+
+# Filtering: Using parameters for our data
+
+out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(230,230),
+                     maxN=0, maxEE=c(1,2), minQ=11, rm.phix=TRUE,
+                     compress=TRUE, multithread=FALSE) 
+
+names(filtFs) <- sample.names
+names(filtRs) <- sample.names
+
+# This step is very slow so it makes sense to save this intermediate step
+#saveRDS(out, "01-out.rds")
+```
+
+
+## Learn Error Rates
+```{r}
+set.seed(20)
+#learn the error rates for forward reads
+errF <- learnErrors(filtFs, nbases=1e8, multithread=TRUE)
+#learn the error rates for reverse reads
+errR <- learnErrors(filtRs, nbases=1e8, multithread=TRUE)
+# plot error rates
+plotErrors(errR, nominalQ=TRUE)
+plotErrors(errF, nominalQ=TRUE)
+```
+
+## Dereplicate, and merge
+```{r}
+#Creat empty list to save the merged reads. 
+mergers <- vector("list", length(sample.names))
+names(mergers) <- sample.names
+
+for(sam in sample.names) {
+  derepFs <- derepFastq(filtFs[[sam]])
+  dadaFs <- dada(derepFs, err=errF, multithread=TRUE)
+  derepRs <- derepFastq(filtRs[[sam]])
+  dadaRs <- dada(derepRs, err=errR, multithread=TRUE)
+  merger <- mergePairs(dadaFs, derepFs, dadaRs, derepRs)
+  mergers[[sam]] <- merger
+}
+
+rm(derepFs); rm(derepRs)
+
+#Make and save sequence table
+seqtab <- makeSequenceTable(mergers)
+#saveRDS(seqtab, "02-seqtab.rds") 
+
+dim(seqtab)
+
+#Check sequence lengths (must be around 250bp)
+hist(nchar(getSequences(seqtab)))
+
+#Percentage of sequences longer than 256 --> 0.17%
+sum(nchar(getSequences(seqtab))>256)/dim(seqtab)[2]*100
+##Percentage of sequences shorter than 248 --> 0
+sum(nchar(getSequences(seqtab))<248)/dim(seqtab)[2]*100
+
+# Note: More stringent filtering reduced the amount of weird size fragments
+
+#Remove sequences much shorter or longer than expected
+seqtab2 <- seqtab[,nchar(colnames(seqtab)) %in% seq(248,256)]
+
+```
+
+## Merge paired reads, sequence table, remove chimeras
+```{r}
+seqtab.nochim <- removeBimeraDenovo(seqtab2, method="consensus", multithread=TRUE, verbose=TRUE)
+#saveRDS(seqtab.nochim, "seqtab.nochim.rds")
+dim(seqtab.nochim)
+
+#Save seqtab
+write.csv(seqtab.nochim, paste0(path.data,"ESVtable.csv"))
+```
+
+### Track Reads Through Pipeline
+```{r}
+### Table
+getN <- function(x) sum(getUniques(x))
+track <- cbind(out,  sapply(mergers, getN), rowSums(seqtab.nochim))
+# If processing a single sample, remove the sapply calls: e.g. replace sapply(dadaFs, getN) with getN(dadaFs)
+colnames(track) <- c("input", "filtered", "merged", "nonchim")
+rownames(track) <- sample.names
+track
+track.df <- as.data.frame(track)
+
+
+#### Plot ####
+
+# Plot the number of reads through the steps in the dada2 pipeline
+library(data.table)
+setDT(track.df, keep.rownames = TRUE)[]
+colnames(track.df)[1] <- "Sample.ID"
+track.df <- as.data.frame(track.df)
+track.names <- names(track.df)
+
+summary(track.df)
+reads_tot <- apply(track.df[2:5],2,sum)
+percents <- reads_tot[2:4]/reads_tot[1]
+
+pdf("Plots/reads_tracking.pdf")
+matplot(t(track.df[, -1]), type="l", ylab = "Number of Reads", xlab = "Step", xaxt = 'n')
+axis(1, at=1:(length(track.names)-1), labels=track.names[2:length(track.names)])
+dev.off()
+
+water <- grep("H2O",track.df$Sample.ID)
+track.df[water,]
+
+hist(track.df$nonchim, main = "Number of reads per sample", xlab = "Number of reads")
+min_reads <- min(track.df$nonchim) #8064!! - This is a great coverage, so I can rarefy at this level. 
+```
+
+
+## Assign Taxonomy
+```{r}
+#### Assign Taxonomy using SILVA database ####
+taxa <- assignTaxonomy(seqtab.nochim, "/media/mariargz/Extra Drive 1/MimulusMicrobiome/raw/silva_nr_v132_train_set.fa.gz", multithread=TRUE)
+taxa.print <- taxa # Removing sequence rownames for display only
+rownames(taxa.print) <- NULL
+head(taxa.print)
+
+write.table(taxa, file= paste0(path.data,"taxa_silva_v132.txt"))
+
+```
+
+# Process OTU and evaluate relative abundances
+## Load new packages
+```{r}
+#BiocManager::install("phyloseq")
+library(vegan)
+```
+
+## Rarefaction and filtering of ESV table
+```{r}
+# Rarefaction to the minimum number of reads in a sample
+rarefied_data <- rrarefy(seqtab.nochim, min_reads) 
+
+#Check dimensions of data 
+dim(rarefied_data)
+#[1] 480 901 (samples ESVs)
+
+# Remove ESVs that are empty
+colsums <- colSums(rarefied_data)>0
+rarefied_noempty <- rarefied_data[,colsums]
+
+#Check dimensions of data again to make sure empty ESVs were removed
+dim(rarefied_noempty)
+#[1] 480 593 
+
+write.csv(rarefied_noempty, paste0(path.data, "rarefied_data.csv"))
+```
+
