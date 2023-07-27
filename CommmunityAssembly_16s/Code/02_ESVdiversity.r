@@ -15,7 +15,7 @@ library(emmeans)
 
 
 # Assign path to data (change to the right path to directory)
-#parent = "~/Dropbox/Projects/TemperatureCommunities/TC_final/CommmunityAssembly_16s/"
+#parent = " directory to this folder /CommmunityAssembly_16s/"
 
 
 # Set working directory

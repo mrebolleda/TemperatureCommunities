@@ -20,7 +20,7 @@ library(data.table)
 col_rep <- c("#90a955","#4f772d", "#31572c")
 
 # Define parent directory as reference (change as appropriate)
-# parent <- "Change file path /TC_final/GrowthAnalysis/"
+# parent <- "Change file path/GrowthAnalysis/"
 
 # Set parent directory as working directory
 setwd(parent)

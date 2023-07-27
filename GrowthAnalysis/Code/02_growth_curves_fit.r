@@ -19,7 +19,7 @@ library(latex2exp)
 library(emmeans)
 
 # Parent directory (change accordingly)
-# parent <- ("path to folder/TC_final/GrowthAnalysis")
+# parent <- ("path to folder/GrowthAnalysis")
 
 # Set parent as working directory
 setwd(parent)

@@ -18,7 +18,7 @@ library(lme4)
 library(tidyverse)
 
 # Parent directory (change accordingly)
-parent <- ("/Users/mrebolleda/Dropbox/Projects/TemperatureCommunities/TC_final/GrowthAnalysis")
+# parent <- ("path to directory /GrowthAnalysis")
 
 # Set parent as working directory
 setwd(parent)
