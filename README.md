@@ -1,6 +1,8 @@
 # Data and code for "Predictive microbial community changes across a temperature gradient"
 
-This README file contains the overall structure of all folders and their contents in this repository. However, when more detailed information about data is needed, we made individual README files in the corresponding folders. 
+This README file contains the overall structure of all folders and their contents in this repository. 
+
+The overall aim of this work was to evaluate the role of conserved metabolic rules in predicting microbial community assembly across a gradient of temperature. We used experimental replicated community assemblies starting from the same source sample (leaf litter) in simple media with a single sugar as a carbon source. We repeated these assemblies across different temperatures. 
 
 ## Information about the paper 
 
@@ -14,6 +16,8 @@ Jacquelyn Folmar (jackie.folmar@yale.edu)
 Ariel Favier (afavier@uci.edu)
 Nora Pyenson (nora.pyenson@yale.edu)
 Alvaro Sanchez (alvaro.sanchez@cnb.csic.es)
+
+MRG and AS conceived the experiments with help of XS. MRG conducted the community assembly experiments and DNA extractions. NP and MRG isolated the bacteria. XS and JF performed all growth assays. XS, JF and AF performed measurments of glucose and organic acids. MRG, JF, XS, AF performed all analyses.
 
 
 ## Overview 

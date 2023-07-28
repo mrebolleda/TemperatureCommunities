@@ -171,6 +171,7 @@ dif <- function(x, pair){
 prm_list <- split(no_out, by=c("tmp"))
 
 mod <- lm(mean_r ~ Fermenter + carbon_source + as.factor(temperature), data=prm_list[[4]])
+
 difs <- lapply(prm_list, dif, pair=T) %>% rbindlist
 means <- lapply(prm_list, dif, pair=F) %>% rbindlist
 

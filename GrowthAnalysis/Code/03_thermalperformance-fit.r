@@ -88,7 +88,6 @@ ggplot(dt.parms, aes(x = tmp, y = mean_r, color = Fermenter, group = interaction
 # Some curves with predicted values significantly outside of observed range. 
 # Remove based on estimated rmax and topt
 
-
 out_growth <- preds$ID[preds$.fitted > .65] %>% unique
 # 2 curves removed, split across temps and carbon. One respirator, one fermenter 
 
@@ -128,7 +127,6 @@ dev.off()
 coefs$temp_origin <- as.numeric(coefs$temp_origin)
 mod_topt <- lm(temp_origin ~ fermenter*topt , data = coefs.bound)
 summary(mod_topt)
-
 
 par(mfrow=c(2,2))
 plot(mod_topt)
