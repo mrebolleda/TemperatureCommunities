@@ -183,3 +183,26 @@ ggplot(mean_rf[Temp!=12,], aes(y=log(mean_rf), x=Temp))+
     geom_line(aes(y= log(rf_pred)),linetype=2)+
     theme_bw()
 dev.off()
+
+##################################################################
+#### Fit predicted values to Estrela et al., 2022 communities ####
+##################################################################
+
+estrela30 <- fread("TemperatureCommunities/PredictionRF/Estrela_Data_RF.csv")
+estrela30_exp <- estrela30[Experiment=="Exp.",]
+
+rf_glu_30 <- data.table(rf = c(merged_sugs[Temp==30 & Carbon == "Glu", rf], merged_sugs[Temp==30, rf], estrela30_exp$ratioRF), 
+    work = c(rep("Glucose", 4), rep("Sugars (all)", 60), rep("Estrela 2022", nrow(estrela30_exp))))
+
+prediction <- unique(mean_rf_glu[Temp==30, rf_pred])
+
+pdf("TemperatureCommunities/PredictionRF/Plots/RF30_pred_estrela.pdf")
+ggplot(rf_glu_30, aes(y = rf, x = work, fill=work))+
+    geom_boxplot(outlier.shape = NA)+
+    #geom_dotplot(binaxis = 'y', dotsize = 0.3, stackdir = "center")+
+    geom_point(shape=1, size=2)+
+    geom_hline(yintercept = prediction, linetype=2)+
+    ylab("R/F")+
+    scale_fill_manual(values=c("gray25","gray40", "gray60"))+
+    theme_bw()
+dev.off()

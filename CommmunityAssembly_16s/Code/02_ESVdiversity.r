@@ -3,7 +3,7 @@
 ########################################################
 ## Author: Maria Rebolleda-Gomez 
 ## Contact: mreboll1@uci.edu
-## Last modified: 2023-05-06
+## Last modified: 2023-11-05
 ########################################################
 
 ############# Set working space ########################
@@ -15,7 +15,7 @@ library(emmeans)
 
 
 # Assign path to data (change to the right path to directory)
-#parent = " directory to this folder /CommmunityAssembly_16s/"
+parent = "/Users/mrebolleda/Dropbox/Projects/TemperatureCommunities/TC_final/TemperatureCommunities/CommmunityAssembly_16s"
 
 
 # Set working directory
@@ -92,6 +92,16 @@ ggplot(ESV_sugars, aes(x=Replicate, y=relab, group=interaction(Family,Genus), fi
   geom_bar(stat="identity", color="black")+
   facet_grid(Temperature~CarbonID)+
   scale_fill_manual(values = cols_fr_long )+
+  theme_bw()
+
+dev.off()
+
+pdf(file = "Plots/Relative_abundance_sugars_esv.pdf", width = 11, height = 5) 
+
+ggplot(ESV_sugars, aes(x=Replicate, y=relab, group=interaction(Family,Genus), fill=Genus))+
+  geom_bar(stat="identity", color="black")+
+  facet_grid(Temperature~CarbonID)+
+  #scale_fill_manual(values = cols_fr_long )+
   theme_bw()
 
 dev.off()
