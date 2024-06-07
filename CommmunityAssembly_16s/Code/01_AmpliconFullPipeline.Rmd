@@ -1,7 +1,7 @@
 ---
 title: "TC: Amplicon analysis"
 author: "Maria Rebolleda Gómez"
-date: "01/10/2020"
+date: "02/26/2023"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -40,7 +40,7 @@ Using demultiplexed files.
 # Install and load in dada2 package
 if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
-BiocManager::install("dada2", version = "3.17")
+BiocManager::install("dada2", version = "3.16")
 
 library(dada2)
 library(data.table)
@@ -56,6 +56,8 @@ path.out <- paste0(parent, "/Output/")
 path.data<- paste0(parent,"/Processed_Data/")
 # Assign directory to sequences (NCBI SRA; Accession: PRJNA992630)
 # path.in<- "Directory to sequences"
+# Assign directory to taxa databases 
+# path.taxa <- "Directory to taxonomic databases (full)"
 
 # Set working directory
 setwd(path.out)
@@ -209,14 +211,21 @@ min_reads <- min(track.df$nonchim) #8064!! - This is a great coverage, so I can 
 ## Assign Taxonomy
 ```{r}
 #### Assign Taxonomy using SILVA database ####
-taxa <- assignTaxonomy(seqtab.nochim, "/media/mariargz/Extra Drive 1/MimulusMicrobiome/raw/silva_nr_v132_train_set.fa.gz", multithread=TRUE)
+taxa <- assignTaxonomy(seqtab.nochim, paste0(path.taxa, "/silva_nr_v132_train_set.fa.gz"), multithread=TRUE)
 taxa.print <- taxa # Removing sequence rownames for display only
 rownames(taxa.print) <- NULL
 head(taxa.print)
 
-write.table(taxa, file= paste0(path.data,"taxa_silva_v132.txt"))
+write.table(taxa, file= paste0(path.out,"taxa_silva_v132.txt"))
 
 ```
+
+# Assign taxonomy using rDP to match with rRNA operon copy numbers
+```{r}
+taxardp <- assignTaxonomy(seqtab.nochim, refFasta = paste0(path.taxa, "/rdp_train_set_18.fa.gz"), multithread=TRUE)
+
+write.table(taxardp, file = paste0(path.out, "/taxa_rdp.txt"))
+``` 
 
 # Process OTU and evaluate relative abundances
 ## Load new packages

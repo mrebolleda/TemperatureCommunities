@@ -15,7 +15,7 @@ library(emmeans)
 
 
 # Assign path to data (change to the right path to directory)
-parent = "/Users/mrebolleda/Dropbox/Projects/TemperatureCommunities/TC_final/TemperatureCommunities/CommmunityAssembly_16s"
+#parent = "PATH TO DIRECTORY/CommmunityAssembly_16s"
 
 
 # Set working directory
@@ -25,12 +25,14 @@ setwd(parent)
 cols_sugars <- c("#50514F", '#9E6E40',"#D6B79A",
     "#FF9BC3", '#F7A2A1', '#F25F5C',
     '#F9A061', "#FFE066",'#A0B971',"#59A14F",
-    "#3B8886", "#70C1B3","#8BCAE5", "#227396",'#594B73')
+    "#3B8886", "#70C1B3","#8BCAE5", "#227396",'#594B73', 
+    "#8338ec","#ff006e", "#fb5607", "#ffbe0b", "gray20", "gray60")
 
 cols_fr_long <- c("#FFA62B", "#82C0CC","#16697a","gray40",
     "gray60","#aa856d","#f0dcc4","#e65d5d","gray80","gray90")
 
 cols_tmp <- c(c("#2c7bb6","#abd9e9","#f4da8c","#fdae61","#d7191c"))
+
 
 ################ Open files and format data ###############
 metadata <- fread("Data/TC1_amplicon_metadata.csv")
@@ -96,12 +98,34 @@ ggplot(ESV_sugars, aes(x=Replicate, y=relab, group=interaction(Family,Genus), fi
 
 dev.off()
 
-pdf(file = "Plots/Relative_abundance_sugars_esv.pdf", width = 11, height = 5) 
+pdf(file = "Plots/Relative_abundance_sugars_esv.pdf", width = 15, height = 5) 
 
 ggplot(ESV_sugars, aes(x=Replicate, y=relab, group=interaction(Family,Genus), fill=Genus))+
   geom_bar(stat="identity", color="black")+
   facet_grid(Temperature~CarbonID)+
-  #scale_fill_manual(values = cols_fr_long )+
+  scale_fill_manual(values = cols_sugars)+
+  theme_bw()
+
+dev.off()
+
+pdf(file = "Plots/Relab_acetate_family.pdf", width = 4, height = 5) 
+
+ggplot(ESV_abundant[CarbonID=="Ace",], aes(x=Replicate, y=relab, group=interaction(Family,Genus), fill=Family))+
+  geom_bar(stat="identity", color="black")+
+  facet_grid(Temperature~CarbonID)+
+  scale_fill_manual(values = c("#FFA62B", "#82C0CC","#aa856d","#f0dcc4","#e65d5d","gray80","gray40"))+
+  theme_bw()
+
+dev.off()
+
+pdf(file = "Plots/Relab_acetate_genus.pdf", width = 4, height = 5) 
+
+ggplot(ESV_abundant[CarbonID=="Ace",], aes(x=Replicate, y=relab, group=interaction(Family,Genus), fill=Genus))+
+  geom_bar(stat="identity", color="black")+
+  facet_grid(Temperature~CarbonID)+
+  scale_fill_manual(values =  c("#50514F", '#9E6E40',"#D6B79A",
+    '#F9A061', '#A0B971', "#70C1B3","#8BCAE5", "#227396",'#594B73', 
+    "#8338ec", "#fb5607",  "gray20"))+
   theme_bw()
 
 dev.off()
@@ -189,10 +213,24 @@ summary(model)
 model2 <- lm(log_rf ~ Temp + Carbon, data = subset)
 summary(model2)
 
+# Get contribution variance
+var_int <- summary(model)$adj.r.squared - summary(model2)$adj.r.squared
+# 0.07192852
+
+model3 <- lm(log_rf ~ Temp, data = subset)
+model4 <- lm(log_rf ~ Carbon, data = subset)
+
+var_carbon <- summary(model2)$adj.r.squared - summary(model3)$adj.r.squared
+# 0.1395113
+
+var_temp <- summary(model2)$adj.r.squared - summary(model4)$adj.r.squared
+# 0.2809585
+
 # Check assumptions of model
 par(mfrow = c(2,2))
 plot(model)
 # Linear model looks fairly decent
+
 
 # Get slopes coeficients for each carbon
 no12[, log_rf:=log(rf)]
@@ -221,10 +259,14 @@ ggplot(dt_slopes, aes(y = slope, x = Carbon))+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 dev.off()
 
-# Get the R/F difference between 22 and 30
+# Get the R/F difference between 22 and 30, and between 12-22
 only_growthcs <- no12[Carbon %in% c("Glu", "Gal", "Fru", "Rib")]
 only_growthcs[Temp==30, mean(rf)] 
 only_growthcs[Temp==22, mean(rf)]
+
+data_rf[Temp==12, mean(rf)]
+data_rf[Temp==22, mean(rf)]
+
 
 ############################################################
 ############################################################
